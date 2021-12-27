@@ -1,0 +1,17 @@
+<Project>
+    <PropertyGroup>
+        <Authors>Eric</Authors>
+        <Company>UniCloud</Company>
+        <PackageTags>Solver Simplex</PackageTags>
+        <Description>Lightweight utils for solver.</Description>
+        <RepositoryUrl>https://github.com/uniTravel/Solver</RepositoryUrl>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="MinVer" Version="2.5.0">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+</Project>

@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1CC9582F-4394-4EE9-89CA-C7D3E2610600}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Simplex", "src\Simplex\Simplex.fsproj", "{DD4D6F94-3E23-4A38-AFA1-F42264A04AE0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A9B27811-DB0E-4581-867F-21A4733F0FE0}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Simplex.Tests", "test\Simplex.Tests\Simplex.Tests.fsproj", "{B562C8D3-F7A7-4231-92AD-44EAEA03B639}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DD4D6F94-3E23-4A38-AFA1-F42264A04AE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD4D6F94-3E23-4A38-AFA1-F42264A04AE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD4D6F94-3E23-4A38-AFA1-F42264A04AE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD4D6F94-3E23-4A38-AFA1-F42264A04AE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B562C8D3-F7A7-4231-92AD-44EAEA03B639}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B562C8D3-F7A7-4231-92AD-44EAEA03B639}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B562C8D3-F7A7-4231-92AD-44EAEA03B639}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B562C8D3-F7A7-4231-92AD-44EAEA03B639}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DD4D6F94-3E23-4A38-AFA1-F42264A04AE0} = {1CC9582F-4394-4EE9-89CA-C7D3E2610600}
+		{B562C8D3-F7A7-4231-92AD-44EAEA03B639} = {A9B27811-DB0E-4581-867F-21A4733F0FE0}
+	EndGlobalSection
+EndGlobal

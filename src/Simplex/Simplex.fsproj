@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>Solver.Simplex</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <InternalsVisibleTo Include="Simplex.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Matrix.fsi" />
+    <Compile Include="Matrix.fs" />
+  </ItemGroup>
+</Project>
