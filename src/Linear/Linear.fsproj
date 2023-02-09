@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <AssemblyName>Solver.Linear</AssemblyName>
@@ -7,6 +7,15 @@
     <InternalsVisibleTo Include="Linear.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="Exceptions.fsi" />
+    <Compile Include="Exceptions.fs" />
+    <Compile Include="Row.fsi" />
+    <Compile Include="Row.fs" />
+    <Compile Include="Primal.fsi" />
+    <Compile Include="Primal.fs" />
+    <Compile Include="Dual.fsi" />
+    <Compile Include="Dual.fs" />
+    <Compile Include="Upper.fsi" />
+    <Compile Include="Upper.fs" />
   </ItemGroup>
 </Project>
