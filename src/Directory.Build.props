@@ -8,10 +8,10 @@
         <MinVerTagPrefix>v</MinVerTagPrefix>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
-    <!-- <ItemGroup>
-        <PackageReference Include="MinVer" Version="4.2.0">
+    <ItemGroup>
+        <PackageReference Include="MinVer" Version="4.3.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-    </ItemGroup> -->
+    </ItemGroup>
 </Project>
