@@ -1,4 +1,4 @@
-namespace Solver.Simplex
+namespace Solver.Linear
 
 
 /// <summary>规划问题目标无界

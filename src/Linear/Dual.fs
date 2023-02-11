@@ -1,4 +1,4 @@
-namespace Solver.Simplex
+namespace Solver.Linear
 
 
 module Dual =
@@ -38,7 +38,7 @@ module Dual =
         | None -> D(da, [| 0..n |], n, cl, None)
         | Some ai -> D(da, [| 0..n |], n, cl, Some(ai + cl))
 
-    let classic (D (a, l, n, m, _)) trans =
+    let classic (D(a, l, n, m, _)) trans =
         let rec fold r =
             match
                 [ 1..m ]
@@ -61,7 +61,7 @@ module Dual =
 
         fold []
 
-    let optimal (D (a, l, n, m, _)) trans =
+    let optimal (D(a, l, n, m, _)) trans =
         let rec fold r =
             match List.filter (fun i -> a[i, 0] < 0.0) [ 1..m ] with
             | [] -> r
@@ -87,7 +87,7 @@ module Dual =
 
         fold []
 
-    let finish (D (a, l, n, m, _)) trans solution bi =
+    let finish (D(a, l, n, m, _)) trans solution bi =
         List.filter (fun i -> a[i, 0] = 0.0) bi
         |> List.fold
             (fun acc pi ->
@@ -103,7 +103,7 @@ module Dual =
             [ solution ]
 
     let solve pivot trans sim =
-        let (D (a, l, n, m, ai)) = sim
+        let (D(a, l, n, m, ai)) = sim
 
         match ai with
         | None ->

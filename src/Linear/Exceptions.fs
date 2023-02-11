@@ -1,4 +1,4 @@
-namespace Solver.Simplex
+namespace Solver.Linear
 
 
 exception UnboundedError

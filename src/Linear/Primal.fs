@@ -1,4 +1,4 @@
-namespace Solver.Simplex
+namespace Solver.Linear
 
 
 module Primal =
@@ -24,7 +24,7 @@ module Primal =
         let n = Array2D.length2 pa - 1
         P(pa, [| 0..n |], n, bl, ai)
 
-    let classic (P (a, l, n, m, _)) trans =
+    let classic (P(a, l, n, m, _)) trans =
         let rec fold r =
             match
                 [ m + 1 .. n ]
@@ -47,7 +47,7 @@ module Primal =
 
         fold []
 
-    let optimal (P (a, l, n, m, _)) trans =
+    let optimal (P(a, l, n, m, _)) trans =
         let rec fold r =
             match List.filter (fun j -> a[0, l[j]] < 0.0) [ m + 1 .. n ] with
             | [] -> r
@@ -73,7 +73,7 @@ module Primal =
 
         fold []
 
-    let finish (P (a, l, n, m, _)) trans solution ni =
+    let finish (P(a, l, n, m, _)) trans solution ni =
         List.filter (fun j -> a[0, l[j]] = 0.0) ni
         |> List.fold
             (fun acc j ->
@@ -90,7 +90,7 @@ module Primal =
             [ solution ]
 
     let solve pivot trans sim =
-        let (P (a, l, n, m, ai)) = sim
+        let (P(a, l, n, m, ai)) = sim
 
         match ai with
         | None ->

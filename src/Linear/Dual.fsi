@@ -1,4 +1,4 @@
-namespace Solver.Simplex
+namespace Solver.Linear
 
 
 /// <summary>单纯形法对偶问题计算模块

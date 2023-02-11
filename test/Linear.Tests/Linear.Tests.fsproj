@@ -1,13 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Program.fs" />
+    <Compile Include="PrimalClassicTests.fs" />
+    <Compile Include="PrimalOptimalTests.fs" />
+    <Compile Include="DualClassicTests.fs" />
+    <Compile Include="DualOptimalTests.fs" />
+    <Compile Include="UpperClassicTests.fs" />
+    <Compile Include="UpperOptimalTests.fs" />
+    <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Linear\Linear.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Expecto" Version="9.0.4" />
   </ItemGroup>
 </Project>

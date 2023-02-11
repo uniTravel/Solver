@@ -1,4 +1,4 @@
-namespace Solver.Simplex
+namespace Solver.Linear
 
 open System.Collections.Generic
 
@@ -60,7 +60,7 @@ module Upper =
         let p = Seq.map (fun k -> k, ref false) u.Keys |> dict
         U(pa, [| 0..n |], u, p, n, bl, ai)
 
-    let classic (U (a, l, u, p, n, m, _)) trans =
+    let classic (U(a, l, u, p, n, m, _)) trans =
         let rec fold r =
             match
                 [ m + 1 .. n ]
@@ -87,7 +87,7 @@ module Upper =
 
         fold []
 
-    let optimal (U (a, l, u, p, n, m, _)) trans =
+    let optimal (U(a, l, u, p, n, m, _)) trans =
         let rec fold r =
             match List.filter (fun j -> a[0, l[j]] < 0.0) [ m + 1 .. n ] with
             | [] -> r
@@ -117,7 +117,7 @@ module Upper =
 
         fold []
 
-    let finish (U (a, l, u, p, n, m, _)) trans solution ni =
+    let finish (U(a, l, u, p, n, m, _)) trans solution ni =
         List.filter (fun j -> a[0, l[j]] = 0.0) ni
         |> List.fold
             (fun acc j ->
@@ -137,7 +137,7 @@ module Upper =
             [ solution ]
 
     let solve pivot trans sim =
-        let (U (a, l, u, p, n, m, ai)) = sim
+        let (U(a, l, u, p, n, m, ai)) = sim
 
         match ai with
         | None ->
