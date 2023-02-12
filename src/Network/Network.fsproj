@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <AssemblyName>Solver.Network</AssemblyName>
+    <MinVerTagPrefix>Network-</MinVerTagPrefix>
   </PropertyGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
     <InternalsVisibleTo Include="Network.Tests" />

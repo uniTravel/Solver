@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <AssemblyName>Solver.Linear</AssemblyName>
+    <MinVerTagPrefix>Linear-</MinVerTagPrefix>
   </PropertyGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
     <InternalsVisibleTo Include="Linear.Tests" />

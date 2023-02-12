@@ -5,7 +5,6 @@
         <PackageTags>Solver Simplex</PackageTags>
         <Description>Lightweight utils for solver.</Description>
         <RepositoryUrl>https://github.com/uniTravel/Solver</RepositoryUrl>
-        <MinVerTagPrefix>v</MinVerTagPrefix>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
