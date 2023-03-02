@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <AssemblyName>Solver.Network</AssemblyName>
@@ -8,6 +8,13 @@
     <InternalsVisibleTo Include="Network.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="Subject.fsi" />
+    <Compile Include="Subject.fs" />
+    <Compile Include="Primal.fsi" />
+    <Compile Include="Primal.fs" />
+    <Compile Include="Dual.fsi" />
+    <Compile Include="Dual.fs" />
+    <Compile Include="Auction.fsi" />
+    <Compile Include="Auction.fs" />
   </ItemGroup>
 </Project>
