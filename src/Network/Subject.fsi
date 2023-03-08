@@ -27,13 +27,13 @@ module Subject =
     /// <summary>创建网络规划问题
     /// </summary>
     /// <param name="n">节点及其供应量：索引为零的系备用根节点，其他节点应按值倒序排列。</param>
-    /// <param name="cost">弧成本列表：弧尾*弧头*成本。</param>
+    /// <param name="cost">弧成本字典。</param>
     /// <param name="capacity">弧容量上界字典：无上界约束的弧不加入字典，容量下界为零。</param>
     /// <returns>网络规划问题</returns>
-    val init: n: int[] -> cost: (int * int * int) list -> capacity: IDictionary<int * int, int> -> T
+    val init: n: int[] -> cost: IDictionary<int * int, int> -> capacity: IDictionary<int * int, int> -> T
 
     /// <summary>获取网络规划问题值
     /// </summary>
     /// <param name="sub">网络规划问题</param>
     /// <returns>网络规划问题值</returns>
-    val value: sub: T -> int[] * (int * int * int) list * IDictionary<int * int, int>
+    val value: sub: T -> int[] * IDictionary<int * int, int> * IDictionary<int * int, int>

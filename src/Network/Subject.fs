@@ -12,7 +12,7 @@ type Solution =
 
 module Subject =
 
-    type T = Subject of n: int[] * cost: (int * int * int) list * capacity: IDictionary<int * int, int>
+    type T = Subject of n: int[] * cost: IDictionary<int * int, int> * capacity: IDictionary<int * int, int>
 
     let init (n: int[]) cost capacity =
         if n[0] <> 0 then
