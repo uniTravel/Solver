@@ -26,11 +26,24 @@ module Subject =
 
     /// <summary>创建网络规划问题
     /// </summary>
-    /// <param name="n">节点及其供应量：索引为零的系备用根节点，其他节点应按值倒序排列。</param>
+    /// <remarks>问题建模验证规则：
+    /// <para>1、根节点供应量为零。</para>
+    /// <para>2、节点供应量总和为零。</para>
+    /// <para>3、以弧成本字典为准，节点邻接表的邻接关系与之一致。</para>
+    /// <para>4、根节点没有弧相连。</para>
+    /// <para>5、除根节点之外的图为连通图。</para>
+    /// </remarks>
+    /// <param name="n">节点供应量数组：数组索引作为节点编号，第一个元素作为根节点。</param>
+    /// <param name="adjacent">节点邻接表数组：不考虑弧的方向。</param>
     /// <param name="cost">弧成本字典。</param>
     /// <param name="capacity">弧容量上界字典：无上界约束的弧不加入字典，容量下界为零。</param>
     /// <returns>网络规划问题</returns>
-    val init: n: int[] -> cost: IDictionary<int * int, int> -> capacity: IDictionary<int * int, int> -> T
+    val init:
+        n: int[] ->
+        adjacent: int list list ->
+        cost: IDictionary<int * int, int> ->
+        capacity: IDictionary<int * int, int> ->
+            T
 
     /// <summary>获取网络规划问题值
     /// </summary>

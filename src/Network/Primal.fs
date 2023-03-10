@@ -163,8 +163,8 @@ module Primal =
             | _ -> ()
 
         let prepare1 size (candidate: Dictionary<int * int, int>) =
-            let rec apply cl =
-                match cl with
+            let rec apply =
+                function
                 | (t, h, c) :: tail ->
                     match candidate.Count with
                     | s when s = size -> s
@@ -176,8 +176,8 @@ module Primal =
             apply cl
 
         let prepare2 candidate =
-            let rec apply cl =
-                match cl with
+            let rec apply =
+                function
                 | (t, h, c) :: tail ->
                     sc t h c candidate
                     apply tail
