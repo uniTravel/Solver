@@ -13,15 +13,16 @@ module Subject =
 
     type T = Subject of n: int[] * cost: IDictionary<int * int, int> * capacity: IDictionary<int * int, int>
 
-    let bfs len (adjacent: int list list) =
+    let bfs len (adjacent: int list list) (inverse: int list list) =
         let n = Array.zeroCreate<int> len
         let queue = Queue<int>(len)
+        let nodes = (adjacent, inverse) ||> List.map2 (fun adj inv -> adj @ inv)
         n[0] <- 1
         queue.Enqueue 1
         n[1] <- 1
 
         while queue.Count <> 0 do
-            adjacent[queue.Dequeue()]
+            nodes[queue.Dequeue()]
             |> List.iter (fun i ->
                 match n[i] with
                 | 0 ->
@@ -31,7 +32,7 @@ module Subject =
 
         n |> Array.exists (fun e -> e = 0)
 
-    let init (n: int[]) (adjacent: int list list) (cost: IDictionary<int * int, int>) capacity =
+    let init (n: int[]) (adj: int list list) (inv: int list list) (cost: IDictionary<int * int, int>) capacity =
         if n[0] <> 0 then
             invalidArg (nameof n) $"Supply of node 0 must be zero."
 
@@ -44,25 +45,30 @@ module Subject =
         if n.Length - cost.Count > 2 then
             invalidArg (nameof cost) $"Graph must be connected."
 
-        let pro = HashSet<int * int> cost.Count
-        let anti = HashSet<int * int> cost.Count
+        let pros = HashSet<int * int> cost.Count
+        let cons = HashSet<int * int> cost.Count
 
-        ((pro, anti), List.indexed adjacent)
-        ||> List.fold (fun (pro, anti) (i, jl) ->
-            jl
-            |> List.iter (fun j ->
-                match (i, j) with
-                | i, j when cost.ContainsKey(i, j) -> pro.Add(i, j) |> ignore
-                | i, j when cost.ContainsKey(j, i) -> anti.Add(i, j) |> ignore
-                | _ -> invalidArg (nameof adjacent) $"Graph doesn't contain arc ({i},{j}).")
+        (adj, inv)
+        ||> List.iteri2 (fun i adj inv ->
+            adj
+            |> List.iter (function
+                | j when pros.Contains(i, j) -> invalidArg (nameof adj) $"Arc ({i},{j}) duplicated."
+                | j when cost.ContainsKey(i, j) -> pros.Add(i, j) |> ignore
+                | j -> invalidArg (nameof adj) $"Graph doesn't contain arc ({i},{j}).")
 
-            pro, anti)
-        |> ignore
+            inv
+            |> List.iter (function
+                | j when cons.Contains(i, j) -> invalidArg (nameof inv) $"Arc ({i},{j}) duplicated."
+                | j when cost.ContainsKey(j, i) -> cons.Add(i, j) |> ignore
+                | j -> invalidArg (nameof inv) $"Graph doesn't contain arc ({j},{i})."))
 
-        if pro.Count <> cost.Count || anti.Count <> cost.Count then
-            invalidArg (nameof adjacent) $"Adjacent unmatched with arcs."
+        if pros.Count <> cost.Count then
+            invalidArg (nameof adj) $"There has unmatched arcs."
 
-        if bfs n.Length adjacent then
+        if cons.Count <> cost.Count then
+            invalidArg (nameof inv) $"There has unmatched arcs."
+
+        if bfs n.Length adj inv then
             invalidArg (nameof cost) $"Graph must be connected."
 
         Subject(n, cost, capacity)

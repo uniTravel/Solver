@@ -34,13 +34,15 @@ module Subject =
     /// <para>5、除根节点之外的图为连通图。</para>
     /// </remarks>
     /// <param name="n">节点供应量数组：数组索引作为节点编号，第一个元素作为根节点。</param>
-    /// <param name="adjacent">节点邻接表数组：不考虑弧的方向。</param>
+    /// <param name="adj">节点邻接列表。</param>
+    /// <param name="inv">节点逆邻接列表。</param>
     /// <param name="cost">弧成本字典。</param>
     /// <param name="capacity">弧容量上界字典：无上界约束的弧不加入字典，容量下界为零。</param>
     /// <returns>网络规划问题</returns>
     val init:
         n: int[] ->
-        adjacent: int list list ->
+        adj: int list list ->
+        inv: int list list ->
         cost: IDictionary<int * int, int> ->
         capacity: IDictionary<int * int, int> ->
             T
