@@ -43,14 +43,15 @@ module Primal =
             let e = depth[ii] - depth[joint] - 1
             let pruned = l[s..e]
             let junction, tree = subtree ij
-            let next = thread[tree.Head]
-            origin |> List.iter (fun n -> p[n] <- p[n] - r)
+            origin |> List.iter (fun n -> p[n] <- p[n] + r)
             prune oi oj origin.Head |> ignore
+            let next = thread[tree.Head]
 
             (pruned, subtree ii)
             ||> List.scanBack (fun (i, _, a, _, _) (v, tree) ->
                 pred[i] <- a
                 prune i v tree.Head)
+            |> List.rev
             |> List.fold
                 (fun (s, e) (v, tree) ->
                     match depth[s] + 1 - depth[v] with
@@ -87,7 +88,7 @@ module Primal =
                         update oi -j ii ij f r cf
                     | j ->
                         pred[ij] <- ia
-                        update oi j ij ii b r cb
+                        update oi j ij ii b -r cb
 
                     Feasible
 
@@ -190,7 +191,7 @@ module Primal =
             | 0 ->
                 match prepare candidate with
                 | 0 ->
-                    match x |> Seq.exists (fun (KeyValue((t, h), v)) -> t = 0 || h = 0 && v > 0) with
+                    match x |> Seq.exists (fun (KeyValue((t, h), v)) -> (t = 0 || h = 0) && v > 0) with
                     | true -> Infeasible
                     | false -> Optimal(x, u)
                 | _ -> run (prepare, candidate)
