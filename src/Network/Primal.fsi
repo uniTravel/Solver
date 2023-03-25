@@ -16,7 +16,6 @@ module Primal =
     /// <returns>网络规划原算法模型</returns>
     val create: sub: Subject.T -> T
 
-
     /// <summary>求解网络规划问题
     /// </summary>
     /// <param name="size">入基候选字典的最大长度。</param>

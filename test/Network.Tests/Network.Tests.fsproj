@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="SubjectTests.fs" />
     <Compile Include="PrimalTests.fs" />
+    <Compile Include="DualTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>

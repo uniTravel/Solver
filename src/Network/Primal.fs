@@ -39,9 +39,7 @@ module Primal =
 
         let update oi oj ii ij joint r (l: (int * int * (int * int) * int * (int -> int -> int)) list) =
             let _, origin = subtree oj
-            let s = depth[oj] - depth[joint]
-            let e = depth[ii] - depth[joint] - 1
-            let pruned = l[s..e]
+            let pruned = l[depth[oj] - depth[joint] .. depth[ii] - depth[joint] - 1]
             let junction, tree = subtree ij
             origin |> List.iter (fun n -> p[n] <- p[n] + r)
             prune oi oj origin.Head |> ignore
@@ -125,14 +123,14 @@ module Primal =
             joint a [ fst a, 0, a, max, (+) ] [] a t h r
 
     let create sub =
-        let n, cost, capacity = Subject.value sub
+        let n, _, _, cost, capacity = Subject.value sub
         let p = Array.zeroCreate<int> n.Length
         let pred = Array.create<int * int> n.Length (0, 0)
         let depth = Array.zeroCreate<int> n.Length
         let thread = Array.ofList [ 1 .. n.Length ]
-        let x = Dictionary<int * int, int>(n.Length - 1)
+        let x = Dictionary<int * int, int> n.Length
         let u = Dictionary<int * int, int>()
-        let max = (n |> Array.takeWhile (fun v -> v >= 0) |> Array.sum) + 1
+        let max = (n |> Array.filter (fun e -> e > 0) |> Array.sum) + 1
         let (KeyValue(_, c)) = cost |> Seq.maxBy (fun (KeyValue(_, c)) -> abs c)
         let m = (n.Length - 1) * c / 2 + 1
         thread[n.Length - 1] <- 0
@@ -153,8 +151,7 @@ module Primal =
 
         Primal(max, cost, capacity, p, pred, depth, thread, x, u)
 
-    let solve size sub =
-        let (Primal(max, cost, capacity, p, pred, depth, thread, x, u)) = sub
+    let solve size (Primal(max, cost, capacity, p, pred, depth, thread, x, u) as sub) =
         let cl = cost |> Seq.map (fun (KeyValue((t, h), c)) -> t, h, c) |> Seq.toList
 
         let sc t h c (candidate: Dictionary<int * int, int>) =
@@ -191,9 +188,12 @@ module Primal =
             | 0 ->
                 match prepare candidate with
                 | 0 ->
-                    match x |> Seq.exists (fun (KeyValue((t, h), v)) -> (t = 0 || h = 0) && v > 0) with
-                    | true -> Infeasible
-                    | false -> Optimal(x, u)
+                    match x |> Seq.find (fun (KeyValue((t, h), _)) -> t = 0 || h = 0) with
+                    | KeyValue(_, v) when v > 0 -> Infeasible
+                    | KeyValue(k, _) ->
+                        x.Remove k |> ignore
+                        u |> Seq.iter (fun (KeyValue(k, v)) -> x[k] <- v)
+                        Optimal x
                 | _ -> run (prepare, candidate)
             | _ ->
                 match pivot sub candidate with
