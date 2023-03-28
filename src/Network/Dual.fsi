@@ -10,7 +10,7 @@ module Dual =
     /// </summary>
     type T
 
-    /// <summary>创建网络规划原算法模型
+    /// <summary>创建网络规划对偶算法模型
     /// </summary>
     /// <param name="sub">网络规划问题。</param>
     /// <returns>网络规划对偶算法模型</returns>

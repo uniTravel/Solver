@@ -38,14 +38,14 @@ module Subject =
     /// <param name="adj">节点邻接数组。</param>
     /// <param name="inv">节点逆邻接数组。</param>
     /// <param name="cost">弧成本字典。</param>
-    /// <param name="capacity">弧容量上界字典：无上界约束的弧不加入字典，容量下界为零。</param>
+    /// <param name="cap">弧容量上界字典：无上界约束的弧不加入字典，容量下界为零。</param>
     /// <returns>网络规划问题</returns>
     val init:
         n: int[] ->
         adj: int[][] ->
         inv: int[][] ->
         cost: IDictionary<int * int, int> ->
-        capacity: IDictionary<int * int, int> ->
+        cap: IDictionary<int * int, int> ->
             T
 
     /// <summary>获取网络规划问题值

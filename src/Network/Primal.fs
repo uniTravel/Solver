@@ -9,7 +9,7 @@ module Primal =
         | Primal of
             max: int *
             cost: IDictionary<int * int, int> *
-            capacity: IDictionary<int * int, int> *
+            cap: IDictionary<int * int, int> *
             p: int[] *
             pred: (int * int)[] *
             depth: int[] *
@@ -17,7 +17,7 @@ module Primal =
             x: Dictionary<int * int, int> *
             u: Dictionary<int * int, int>
 
-    let pivot (Primal(max, cost, capacity, p, pred, depth, thread, x, u)) (candidate: Dictionary<int * int, int>) =
+    let pivot (Primal(max, cost, cap, p, pred, depth, thread, x, u)) (cand: Dictionary<int * int, int>) =
         let subtree root =
             let rec apply current tree =
                 match thread[current] with
@@ -66,7 +66,7 @@ module Primal =
             | f, b when f = b ->
                 let cycle = cf @ List.rev cb
                 let oi, oj, oa, d, _ = cycle |> List.minBy (fun (_, _, _, d, _) -> d)
-                candidate.Remove ia |> ignore
+                cand.Remove ia |> ignore
 
                 match d with
                 | d when d = max -> Unbounded
@@ -76,7 +76,7 @@ module Primal =
                     match x[oa] with
                     | 0 -> x.Remove oa |> ignore
                     | _ ->
-                        u[oa] <- capacity[oa]
+                        u[oa] <- cap[oa]
                         x.Remove oa |> ignore
 
                     match oj with
@@ -94,36 +94,33 @@ module Primal =
                 match depth[f], depth[b] with
                 | df, db when df > db ->
                     match pred[f] with
-                    | t, h when h = f ->
-                        match capacity.ContainsKey(t, h) with
-                        | true -> joint (t, b) ((t, -h, (t, h), capacity[(t, h)] - x[(t, h)], (+)) :: cf) cb ia ii ij r
-                        | false -> joint (t, b) ((t, -h, (t, h), max, (+)) :: cf) cb ia ii ij r
-                    | t, h -> joint (h, b) ((h, -t, (t, h), x[(t, h)], (-)) :: cf) cb ia ii ij r
+                    | t, h as a when h = f ->
+                        match cap.ContainsKey a with
+                        | true -> joint (t, b) ((t, -h, a, cap[a] - x[a], (+)) :: cf) cb ia ii ij r
+                        | false -> joint (t, b) ((t, -h, a, max, (+)) :: cf) cb ia ii ij r
+                    | t, h as a -> joint (h, b) ((h, -t, a, x[a], (-)) :: cf) cb ia ii ij r
                 | _ ->
                     match pred[b] with
-                    | t, h when t = b ->
-                        match capacity.ContainsKey(t, h) with
-                        | true -> joint (f, h) cf ((h, t, (t, h), capacity[(t, h)] - x[(t, h)], (+)) :: cb) ia ii ij r
-                        | false -> joint (f, h) cf ((h, t, (t, h), max, (+)) :: cb) ia ii ij r
-                    | t, h -> joint (f, t) cf ((t, h, (t, h), x[(t, h)], (-)) :: cb) ia ii ij r
+                    | t, h as a when t = b ->
+                        match cap.ContainsKey a with
+                        | true -> joint (f, h) cf ((h, t, a, cap[a] - x[a], (+)) :: cb) ia ii ij r
+                        | false -> joint (f, h) cf ((h, t, a, max, (+)) :: cb) ia ii ij r
+                    | t, h as a -> joint (f, t) cf ((t, h, a, x[a], (-)) :: cb) ia ii ij r
 
-        match candidate |> Seq.maxBy (fun c -> abs c.Value) with
-        | KeyValue(a, r) when u.ContainsKey a ->
-            let t, h = a
-            x[a] <- capacity[a]
+        match cand |> Seq.maxBy (fun c -> abs c.Value) with
+        | KeyValue((t, h as a), r) when u.ContainsKey a ->
+            x[a] <- cap[a]
             u.Remove a |> ignore
-            joint (h, t) [ h, 0, a, capacity[a], (-) ] [] a h t r
-        | KeyValue(a, r) when capacity.ContainsKey a ->
-            let t, h = a
+            joint (h, t) [ h, 0, a, cap[a], (-) ] [] a h t r
+        | KeyValue((t, h as a), r) when cap.ContainsKey a ->
             x[a] <- 0
-            joint a [ fst a, 0, a, capacity[a], (+) ] [] a t h r
-        | KeyValue(a, r) ->
-            let t, h = a
+            joint a [ fst a, 0, a, cap[a], (+) ] [] a t h r
+        | KeyValue((t, h as a), r) ->
             x[a] <- 0
             joint a [ fst a, 0, a, max, (+) ] [] a t h r
 
     let create sub =
-        let n, _, _, cost, capacity = Subject.value sub
+        let n, _, _, cost, cap = Subject.value sub
         let p = Array.zeroCreate<int> n.Length
         let pred = Array.create<int * int> n.Length (0, 0)
         let depth = Array.zeroCreate<int> n.Length
@@ -149,70 +146,70 @@ module Primal =
                 depth[i] <- 1
                 x[(i, 0)] <- s)
 
-        Primal(max, cost, capacity, p, pred, depth, thread, x, u)
+        Primal(max, cost, cap, p, pred, depth, thread, x, u)
 
-    let solve size (Primal(max, cost, capacity, p, pred, depth, thread, x, u) as sub) =
-        let cl = cost |> Seq.map (fun (KeyValue((t, h), c)) -> t, h, c) |> Seq.toList
+    let solve size (Primal(max, cost, cap, p, pred, depth, thread, x, u) as sub) =
+        let cl = cost |> Seq.map (fun (KeyValue(a, c)) -> a, c) |> Seq.toList
 
-        let sc t h c (candidate: Dictionary<int * int, int>) =
-            match u.ContainsKey(t, h), c + p[h] - p[t] with
-            | true, r when r > 0 -> candidate[(t, h)] <- r
-            | false, r when r < 0 -> candidate[(t, h)] <- r
+        let sc (t, h as a) c (cand: Dictionary<int * int, int>) =
+            match u.ContainsKey a, c + p[h] - p[t] with
+            | true, r when r > 0 -> cand[a] <- r
+            | false, r when r < 0 -> cand[a] <- r
             | _ -> ()
 
-        let prepare1 size (candidate: Dictionary<int * int, int>) =
+        let prepare1 size (cand: Dictionary<int * int, int>) =
             let rec apply =
                 function
-                | (t, h, c) :: tail ->
-                    match candidate.Count with
+                | (a, c) :: tail ->
+                    match cand.Count with
                     | s when s = size -> s
                     | _ ->
-                        sc t h c candidate
+                        sc a c cand
                         apply tail
-                | [] -> candidate.Count
+                | [] -> cand.Count
 
             apply cl
 
-        let prepare2 candidate =
+        let prepare2 cand =
             let rec apply =
                 function
-                | (t, h, c) :: tail ->
-                    sc t h c candidate
+                | (a, c) :: tail ->
+                    sc a c cand
                     apply tail
-                | [] -> candidate.Count
+                | [] -> cand.Count
 
             apply cl
 
-        let rec run (prepare, candidate: Dictionary<int * int, int>) =
-            match candidate.Count with
+        let rec run (prepare, cand: Dictionary<int * int, int>) =
+            match cand.Count with
             | 0 ->
-                match prepare candidate with
+                match prepare cand with
                 | 0 ->
                     match x |> Seq.find (fun (KeyValue((t, h), _)) -> t = 0 || h = 0) with
                     | KeyValue(_, v) when v > 0 -> Infeasible
-                    | KeyValue(k, _) ->
-                        x.Remove k |> ignore
-                        u |> Seq.iter (fun (KeyValue(k, v)) -> x[k] <- v)
+                    | KeyValue(a, _) ->
+                        x.Remove a |> ignore
+                        u |> Seq.iter (fun (KeyValue(a, v)) -> x[a] <- v)
                         Optimal x
-                | _ -> run (prepare, candidate)
+                | _ -> run (prepare, cand)
             | _ ->
-                match pivot sub candidate with
+                match pivot sub cand with
                 | Unbounded -> Unbounded
                 | _ ->
-                    candidate
-                    |> Seq.iter (fun (KeyValue((t, h), r)) ->
-                        match u.ContainsKey(t, h), cost[(t, h)] + p[h] - p[t] with
-                        | true, r when r > 0 -> candidate[(t, h)] <- r
-                        | false, r when r < 0 -> candidate[(t, h)] <- r
-                        | _ -> candidate.Remove((t, h)) |> ignore)
+                    cand
+                    |> Seq.iter (fun (KeyValue((t, h as a), r)) ->
+                        match u.ContainsKey a, cost[a] + p[h] - p[t] with
+                        | true, r when r > 0 -> cand[a] <- r
+                        | false, r when r < 0 -> cand[a] <- r
+                        | _ -> cand.Remove a |> ignore)
 
-                    run (prepare, candidate)
+                    run (prepare, cand)
 
         match size with
         | size when size < cost.Count ->
-            let candidate = Dictionary<int * int, int> size
-            prepare1 size, candidate
+            let cand = Dictionary<int * int, int> size
+            prepare1 size, cand
         | _ ->
-            let candidate = Dictionary<int * int, int> cost.Count
-            prepare2, candidate
+            let cand = Dictionary<int * int, int> cost.Count
+            prepare2, cand
         |> run

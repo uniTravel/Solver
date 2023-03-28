@@ -13,23 +13,23 @@ module Dual =
             adj: int[][] *
             inv: int[][] *
             cost: IDictionary<int * int, int> *
-            capacity: IDictionary<int * int, int> *
+            cap: IDictionary<int * int, int> *
             p: int[] *
             x: Dictionary<int * int, int>
 
-    let price (Dual(max, g, adj, inv, cost, capacity, p, x)) (ind: int[]) =
-        let min (d, mini as de) i j =
+    let price (Dual(max, g, adj, inv, cost, cap, p, x)) (ind: int[]) =
+        let min (d, mini as dm) i j =
             function
             | true ->
                 match p[j] + cost[(i, j)] - p[i] with
-                | r when r < 0 -> de
-                | r when r > d -> de
+                | r when r < 0 -> dm
+                | r when r > d -> dm
                 | r when r = d -> d, (i, j, true) :: mini
                 | r -> r, [ i, j, true ]
             | false ->
                 match p[j] - cost[(j, i)] - p[i] with
-                | r when r < 0 -> de
-                | r when r > d -> de
+                | r when r < 0 -> dm
+                | r when r > d -> dm
                 | r when r = d -> d, (i, j, false) :: mini
                 | r -> r, [ i, j, false ]
 
@@ -48,25 +48,15 @@ module Dual =
             ind |> Array.iter (fun e -> if e > 0 then p[e] <- p[e] + d else ())
             mini
 
-    let augment sink (Dual(max, g, adj, inv, cost, capacity, p, x)) (ind: int[]) (supply: HashSet<int>) (bv: int[]) =
+    let augment sink (Dual(max, g, adj, inv, cost, cap, p, x)) (ind: int[]) (supply: HashSet<int>) (bv: int[]) =
         let rec trace j path =
             match ind[j] with
             | i when i = j -> path, i
             | i ->
                 match bv[j] with
-                | 0 ->
-                    let d = if x.ContainsKey(j, i) then x[(j, i)] else 0
-                    trace i <| ((j, i), d, d, (-)) :: path
-                | -1 ->
-                    let f = if x.ContainsKey(i, j) then x[(i, j)] else 0
-                    trace i <| ((i, j), max, f, (+)) :: path
-                | u ->
-                    let d, f =
-                        match x.ContainsKey(i, j) with
-                        | true -> u - x[(i, j)], x[(i, j)]
-                        | false -> u, 0
-
-                    trace i <| ((i, j), d, f, (+)) :: path
+                | 0 -> trace i <| ((j, i), x[(j, i)], x[(j, i)], (-)) :: path
+                | u when u = max -> trace i <| ((i, j), max, x[(i, j)], (+)) :: path
+                | u -> trace i <| ((i, j), u - x[(i, j)], x[(i, j)], (+)) :: path
 
         let ap, i = trace sink []
         let _, d, _, _ = ap |> List.minBy (fun (_, d, _, _) -> d)
@@ -77,14 +67,22 @@ module Dual =
         if g[i] = 0 then supply.Remove i |> ignore else ()
 
     let create sub =
-        let n, adj, inv, cost, capacity = Subject.value sub
+        let n, adj, inv, cost, cap = Subject.value sub
         let max = (n |> Array.filter (fun e -> e > 0) |> Array.sum) + 1
         let g = Array.copy n
         let p = Array.zeroCreate<int> n.Length
         let x = Dictionary<int * int, int> n.Length
-        Dual(max, g, adj, inv, cost, capacity, p, x)
 
-    let pd (Dual(max, g, adj, inv, cost, capacity, p, x) as sub) =
+        let cap =
+            cost
+            |> Seq.map (fun (KeyValue(a, _)) ->
+                x[a] <- 0
+                if cap.ContainsKey a then a, cap[a] else a, max)
+            |> dict
+
+        Dual(max, g, adj, inv, cost, cap, p, x)
+
+    let pd (Dual(max, g, adj, inv, cost, cap, p, x) as sub) =
         let rec iter (ind: int[]) =
             function
             | (supply: HashSet<int>) when supply.Count = 0 -> Optimal x
@@ -98,10 +96,10 @@ module Dual =
                             mini
                             |> List.iter (fun (i, j, o) ->
                                 if o then
-                                    bv[j] <- if capacity.ContainsKey(i, j) then capacity[(i, j)] else -1
+                                    bv[j] <- cap[(i, j)]
 
                                 ind[j] <- i
-                                if g[j] < 0 then run j bv scan |> ignore else scan.Enqueue j)
+                                if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore)
 
                             run 0 bv scan
                     | 0, _ ->
@@ -111,11 +109,12 @@ module Dual =
                         |> Array.iter (fun j ->
                             match ind[j] with
                             | 0 ->
-                                match p[j] + cost[(i, j)] - p[i] with
-                                | 0 ->
-                                    bv[j] <- if capacity.ContainsKey(i, j) then capacity[(i, j)] else -1
+                                match p[j] + cost[(i, j)] - p[i], x[(i, j)] with
+                                | 0, x when x = cap[(i, j)] -> ()
+                                | 0, _ ->
+                                    bv[j] <- cap[(i, j)]
                                     ind[j] <- i
-                                    if g[j] < 0 then run j bv scan |> ignore else scan.Enqueue j
+                                    if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore
                                 | _ -> ()
                             | _ -> ())
 
@@ -123,10 +122,11 @@ module Dual =
                         |> Array.iter (fun j ->
                             match ind[j] with
                             | 0 ->
-                                match p[j] - cost[(j, i)] - p[i] with
-                                | 0 ->
+                                match p[j] - cost[(j, i)] - p[i], x[(i, j)] with
+                                | 0, 0 -> ()
+                                | 0, _ ->
                                     ind[j] <- i
-                                    if g[j] < 0 then run j bv scan |> ignore else scan.Enqueue j
+                                    if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore
                                 | _ -> ()
                             | _ -> ())
 

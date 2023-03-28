@@ -18,28 +18,28 @@ module Subject =
             adj: int[][] *
             inv: int[][] *
             cost: IDictionary<int * int, int> *
-            capacity: IDictionary<int * int, int>
+            cap: IDictionary<int * int, int>
 
-    let bfs len (adjacent: int[][]) (inverse: int[][]) =
+    let bfs len (adj: int[][]) (inv: int[][]) =
         let ind = Array.zeroCreate<int> len
-        let queue = Queue<int> len
-        let nodes = (adjacent, inverse) ||> Array.map2 (fun adj inv -> Array.append adj inv)
+        let scan = Queue<int> len
+        let nodes = (adj, inv) ||> Array.map2 (fun adj inv -> Array.append adj inv)
         ind[0] <- 1
-        queue.Enqueue 1
+        scan.Enqueue 1
         ind[1] <- 1
 
-        while queue.Count <> 0 do
-            nodes[queue.Dequeue()]
+        while scan.Count <> 0 do
+            nodes[scan.Dequeue()]
             |> Array.iter (fun i ->
                 match ind[i] with
                 | 0 ->
-                    queue.Enqueue i
+                    scan.Enqueue i
                     ind[i] <- 1
                 | _ -> ())
 
         ind |> Array.exists (fun e -> e = 0)
 
-    let init (n: int[]) (adj: int[][]) (inv: int[][]) (cost: IDictionary<int * int, int>) capacity =
+    let init (n: int[]) (adj: int[][]) (inv: int[][]) (cost: IDictionary<int * int, int>) cap =
         if n[0] <> 0 then
             invalidArg (nameof n) $"Supply of node 0 must be zero."
 
@@ -78,6 +78,6 @@ module Subject =
         if bfs n.Length adj inv then
             invalidArg (nameof cost) $"Graph must be connected."
 
-        Subject(n, adj, inv, cost, capacity)
+        Subject(n, adj, inv, cost, cap)
 
-    let value (Subject(n, adj, inv, cost, capacity)) = n, adj, inv, cost, capacity
+    let value (Subject(n, adj, inv, cost, cap)) = n, adj, inv, cost, cap
