@@ -95,11 +95,15 @@ module Dual =
                         | mini ->
                             mini
                             |> List.iter (fun (i, j, o) ->
-                                if o then
+                                match o, ind[j] with
+                                | true, 0 ->
                                     bv[j] <- cap[(i, j)]
-
-                                ind[j] <- i
-                                if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore)
+                                    ind[j] <- i
+                                    if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore
+                                | false, 0 ->
+                                    ind[j] <- i
+                                    if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore
+                                | _ -> ())
 
                             run 0 bv scan
                     | 0, _ ->
@@ -109,9 +113,9 @@ module Dual =
                         |> Array.iter (fun j ->
                             match ind[j] with
                             | 0 ->
-                                match p[j] + cost[(i, j)] - p[i], x[(i, j)] with
-                                | 0, x when x = cap[(i, j)] -> ()
-                                | 0, _ ->
+                                match p[j] + cost[(i, j)] - p[i], x[(i, j)], ind[j] with
+                                | 0, x, _ when x = cap[(i, j)] -> ()
+                                | 0, _, 0 ->
                                     bv[j] <- cap[(i, j)]
                                     ind[j] <- i
                                     if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore
@@ -122,9 +126,9 @@ module Dual =
                         |> Array.iter (fun j ->
                             match ind[j] with
                             | 0 ->
-                                match p[j] - cost[(j, i)] - p[i], x[(i, j)] with
-                                | 0, 0 -> ()
-                                | 0, _ ->
+                                match p[j] - cost[(j, i)] - p[i], x[(i, j)], ind[j] with
+                                | 0, 0, _ -> ()
+                                | 0, _, 0 ->
                                     ind[j] <- i
                                     if g[j] = 0 then scan.Enqueue j else run j bv scan |> ignore
                                 | _ -> ()

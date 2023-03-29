@@ -75,6 +75,9 @@ module Subject =
         if cons.Count <> cost.Count then
             invalidArg (nameof inv) $"There has unmatched arcs."
 
+        if cap |> Seq.forall (fun (KeyValue(a, _)) -> cost.ContainsKey a) |> not then
+            invalidArg (nameof cap) $"There has illegal arcs."
+
         if bfs n.Length adj inv then
             invalidArg (nameof cost) $"Graph must be connected."
 
