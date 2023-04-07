@@ -89,7 +89,6 @@ module Primal =
                         update oi j ij ii b -r cb
 
                     Feasible
-
             | f, b ->
                 match depth[f], depth[b] with
                 | df, db when df > db ->
