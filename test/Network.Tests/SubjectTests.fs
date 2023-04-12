@@ -7,8 +7,8 @@ open Solver.Network
 
 let validate n adj inv cost cap msg =
     let f = fun _ -> Subject.init n adj inv cost cap |> ignore
-    Expect.throwsT<ArgumentException> f "异常类型错误。"
-    Expect.throwsC f <| fun ex -> Expect.equal ex.Message msg "异常消息错误。"
+    Expect.throwsT<ArgumentException> f "异常类型错误"
+    Expect.throwsC f <| fun ex -> Expect.equal ex.Message msg "异常消息错误"
 
 [<Tests>]
 let test =
@@ -104,6 +104,29 @@ let test =
               let cap = dict []
               let msg = $"Graph must be connected. (Parameter 'cost')"
               validate n adj inv cost cap msg
+          testCase "对偶算法模型无上界"
+          <| fun _ ->
+              let n = [| 0; 1; 2; -2; 0; -1 |]
+              let adj = [| [||]; [| 2; 3 |]; [| 3; 4; 5 |]; [| 2 |]; [| 3; 5 |]; [| 4 |] |]
+              let inv = [| [||]; [||]; [| 1; 3 |]; [| 1; 2; 4 |]; [| 2; 5 |]; [| 2; 4 |] |]
+
+              let cost =
+                  dict
+                      [ (1, 2), 5
+                        (1, 3), 2
+                        (2, 3), 6
+                        (3, 2), 3
+                        (2, 4), -2
+                        (4, 3), 2
+                        (2, 5), 2
+                        (4, 5), 3
+                        (5, 4), 0 ]
+
+              let cap = dict []
+              let msg = $"Arcs must have upper bound. (Parameter 'sub')"
+              let f = fun _ -> Subject.init n adj inv cost cap |> Dual.create |> ignore
+              Expect.throwsT<ArgumentException> f "异常类型错误"
+              Expect.throwsC f <| fun ex -> Expect.equal ex.Message msg "异常消息错误"
           testCase "构造问题"
           <| fun _ ->
               let n = [| 0; 1; 0; 0; -1 |]

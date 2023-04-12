@@ -12,6 +12,9 @@ module Dual =
 
     /// <summary>创建网络规划对偶算法模型
     /// </summary>
+    /// <remarks>建模验证规则：
+    /// <para>1、所有弧必须包含上界。</para>
+    /// </remarks>
     /// <param name="sub">网络规划问题。</param>
     /// <returns>网络规划对偶算法模型</returns>
     val create: sub: Subject.T -> T
