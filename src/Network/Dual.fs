@@ -168,6 +168,10 @@ module Dual =
                 ind[j] <- if o then i else -i
                 if todo.ContainsKey d then () else todo[d] <- Queue<int>()
                 todo[d].Enqueue j
+            | d when d = dist[j] && ind[j] = 0 ->
+                ind[j] <- if o then i else -i
+                if todo.ContainsKey d then () else todo[d] <- Queue<int>()
+                todo[d].Enqueue j
             | _ -> ()
 
         let scan k =
@@ -204,12 +208,7 @@ module Dual =
                 | _ -> iter k <| scan k
             | _, s ->
                 augment s sub ind supply
-
-                dist
-                |> Array.iteri (fun i d ->
-                    if k > d then p[i] <- p[i] + k - d else ()
-                    if supply.Contains i then () else dist[i] <- Int32.MaxValue)
-
+                dist |> Array.iteri (fun i d -> if k > d then p[i] <- p[i] + k - d else ())
                 todo.Clear()
                 todo[0] <- Queue supply
                 g |> Array.iteri (fun i e -> if e > 0 then ind[i] <- i else ind[i] <- 0)
