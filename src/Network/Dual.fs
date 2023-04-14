@@ -14,21 +14,31 @@ module Dual =
             cost: IDictionary<int * int, int> *
             cap: IDictionary<int * int, int> *
             p: int[] *
-            x: Dictionary<int * int, int>
+            r: Dictionary<int * int, int> *
+            x: Dictionary<int * int, int> *
+            aug: Stack<(int * int) * int * int * (int -> int -> int)>
 
-    let augment sink (Dual(g, adj, inv, cost, cap, p, x)) (ind: int[]) (supply: HashSet<int>) =
-        let rec trace j path =
+    let augment sink (Dual(g, adj, inv, cost, cap, p, r, x, aug)) (ind: int[]) (supply: HashSet<int>) =
+        let rec trace j d =
             match ind[j] with
-            | i when i = j -> path, i
+            | i when i = j -> i, d
             | i when i < 0 ->
                 let i = -i
-                trace i <| ((j, i), x[(j, i)], x[(j, i)], (-)) :: path
-            | i -> trace i <| ((i, j), cap[(i, j)] - x[(i, j)], x[(i, j)], (+)) :: path
+                aug.Push((j, i), x[(j, i)], x[(j, i)], (-))
+                trace i <| if x[(j, i)] < d then x[(j, i)] else d
+            | i ->
+                let v = cap[(i, j)] - x[(i, j)]
+                aug.Push((i, j), v, x[(i, j)], (+))
+                trace i <| if v < d then v else d
 
-        let ap, i = trace sink []
-        let _, d, _, _ = ap |> List.minBy (fun (_, d, _, _) -> d)
-        let d = [ g[i]; -g[sink]; d ] |> List.min
-        ap |> List.iter (fun (k, _, f, op) -> x[k] <- op f d)
+        let i, d = trace sink Int32.MaxValue
+        let d = min g[i] d
+        let d = min -g[sink] d
+
+        while aug.Count <> 0 do
+            let k, _, f, op = aug.Pop()
+            x[k] <- op f d
+
         g[i] <- g[i] - d
         g[sink] <- g[sink] + d
         if g[i] = 0 then supply.Remove i |> ignore else ()
@@ -44,7 +54,9 @@ module Dual =
 
         let g = Array.copy n
         let p = Array.zeroCreate<int> n.Length
-        let x = Dictionary<int * int, int> n.Length
+        let r = Dictionary<int * int, int> cost
+        let x = Dictionary<int * int, int> cost.Count
+        let aug = Stack<(int * int) * int * int * (int -> int -> int)> n.Length
 
         cost
         |> Seq.iter (function
@@ -54,45 +66,59 @@ module Dual =
                 g[j] <- g[j] + x[k]
             | KeyValue(k, _) -> x[k] <- 0)
 
-        Dual(g, adj, inv, cost, cap, p, x)
+        Dual(g, adj, inv, cost, cap, p, r, x, aug)
 
-    let pd (Dual(g, adj, inv, cost, cap, p, x) as sub) =
+    let pd (Dual(g, adj, inv, cost, cap, p, r, x, aug) as sub) =
         let mutable sink = 0
         let todo = Queue<int> g.Length
+        let expand = Queue<int * int * bool> g.Length
         let ind = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
         let supply = ind |> Array.filter (fun e -> e <> 0) |> HashSet
         supply |> Seq.iter (fun e -> todo.Enqueue e)
 
         let check i j =
-            ind[j] <- i
-            if g[j] = 0 then todo.Enqueue j else sink <- j
+            match sink, ind[j] with
+            | 0, 0 ->
+                ind[j] <- i
+                if g[j] = 0 then todo.Enqueue j else sink <- j
+            | _ -> ()
 
         let price (ind: int[]) =
-            let min (d, mini as dm) i j =
+            let min d i j =
                 function
                 | true ->
                     match p[j] + cost[(i, j)] - p[i] with
-                    | r when r > d -> dm
-                    | r when r = d -> d, (i, j, true) :: mini
-                    | r -> r, [ i, j, true ]
+                    | r when r > d -> d
+                    | r when r = d ->
+                        expand.Enqueue(i, j, true)
+                        d
+                    | r ->
+                        expand.Clear()
+                        expand.Enqueue(i, j, true)
+                        r
                 | false ->
                     match p[j] - cost[(j, i)] - p[i] with
-                    | r when r > d -> dm
-                    | r when r = d -> d, (i, j, false) :: mini
-                    | r -> r, [ i, j, false ]
+                    | r when r > d -> d
+                    | r when r = d ->
+                        expand.Enqueue(i, j, false)
+                        d
+                    | r ->
+                        expand.Clear()
+                        expand.Enqueue(i, j, false)
+                        r
 
             match
-                ((Int32.MaxValue, []), Array.indexed ind)
-                ||> Array.fold (fun dm (i, e) ->
+                (Int32.MaxValue, Array.indexed ind)
+                ||> Array.fold (fun d (i, e) ->
                     match e with
-                    | 0 -> dm
+                    | 0 -> d
                     | _ ->
                         Array.fold
-                            (fun dm j ->
+                            (fun d j ->
                                 match ind[j] with
-                                | 0 -> if x[(i, j)] = cap[(i, j)] then dm else min dm i j true
-                                | _ -> dm)
-                            dm
+                                | 0 -> if x[(i, j)] = cap[(i, j)] then d else min d i j true
+                                | _ -> d)
+                            d
                             adj[i]
                         |> Array.foldBack
                             (fun j dm ->
@@ -101,10 +127,20 @@ module Dual =
                                 | _ -> dm)
                             inv[i])
             with
-            | Int32.MaxValue, _ -> []
-            | d, mini ->
+            | Int32.MaxValue -> false
+            | d ->
                 ind |> Array.iteri (fun i e -> if e <> 0 then p[i] <- p[i] + d else ())
-                mini
+
+                while expand.Count <> 0 do
+                    match expand.Dequeue() with
+                    | i, j, true ->
+                        r[(i, j)] <- 0
+                        check i j
+                    | i, j, false ->
+                        r[(j, i)] <- 0
+                        check -i j
+
+                true
 
         let rec iter () =
             match supply.Count, sink with
@@ -113,35 +149,21 @@ module Dual =
                 match todo.Count with
                 | 0 ->
                     match price ind with
-                    | [] -> Infeasible
-                    | mini ->
-                        mini
-                        |> List.iter (fun (i, j, o) ->
-                            match o, ind[j] with
-                            | true, 0 -> check i j
-                            | false, 0 -> check -i j
-                            | _ -> ())
-
-                        iter ()
+                    | false -> Infeasible
+                    | true -> iter ()
                 | _ ->
                     let i = todo.Dequeue()
 
                     adj[i]
                     |> Array.iter (fun j ->
-                        match ind[j] with
-                        | 0 ->
-                            match x[(i, j)] with
-                            | x when x = cap[(i, j)] -> ()
-                            | _ -> if p[j] + cost[(i, j)] - p[i] = 0 then check i j else ()
+                        match r[(i, j)] with
+                        | 0 -> if x[(i, j)] = cap[(i, j)] then () else check i j
                         | _ -> ())
 
                     inv[i]
                     |> Array.iter (fun j ->
-                        match ind[j] with
-                        | 0 ->
-                            match x[(j, i)] with
-                            | 0 -> ()
-                            | _ -> if p[j] - cost[(j, i)] - p[i] = 0 then check -i j else ()
+                        match r[(j, i)] with
+                        | 0 -> if x[(j, i)] = 0 then () else check -i j
                         | _ -> ())
 
                     iter ()
@@ -155,14 +177,14 @@ module Dual =
 
         iter ()
 
-    let ssp (Dual(g, adj, inv, cost, cap, p, x) as sub) : Solution =
+    let ssp (Dual(g, adj, inv, cost, cap, p, r, x, aug) as sub) : Solution =
         let dist = Array.create g.Length Int32.MaxValue
         let todo = Dictionary<int, Queue<int>>()
         let ind = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
         let supply = ind |> Array.filter (fun e -> e <> 0) |> HashSet
 
-        let check i j o r =
-            match dist[i] + r with
+        let check i j o d =
+            match d with
             | d when d < dist[j] ->
                 dist[j] <- d
                 ind[j] <- if o then i else -i
@@ -183,13 +205,23 @@ module Dual =
                 |> Array.iter (fun j ->
                     match x[(i, j)] with
                     | x when x = cap[(i, j)] -> ()
-                    | _ -> check i j true <| p[j] + cost[(i, j)] - p[i])
+                    | _ ->
+                        match r[(i, j)] with
+                        | 0 -> check i j true dist[i]
+                        | _ ->
+                            r[(i, j)] <- p[j] + cost[(i, j)] - p[i]
+                            check i j true <| dist[i] + r[(i, j)])
 
                 inv[i]
                 |> Array.iter (fun j ->
                     match x[(j, i)] with
                     | 0 -> ()
-                    | _ -> check i j false <| p[j] - cost[(j, i)] - p[i])
+                    | _ ->
+                        match r[(j, i)] with
+                        | 0 -> check i j false dist[i]
+                        | _ ->
+                            r[(j, i)] <- p[j] - cost[(j, i)] - p[i]
+                            check i j false <| dist[i] + r[(j, i)])
 
                 0
 
