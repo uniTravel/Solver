@@ -8,17 +8,19 @@ module Dual =
 
     type T =
         | Dual of
-            g: int[] *
             adj: int[][] *
             inv: int[][] *
             cost: IDictionary<int * int, int> *
             cap: IDictionary<int * int, int> *
+            g: int[] *
             p: int[] *
             r: Dictionary<int * int, int> *
             x: Dictionary<int * int, int> *
+            ind: int[] *
+            supply: HashSet<int> *
             aug: Stack<(int * int) * int * int * (int -> int -> int)>
 
-    let augment sink (Dual(g, adj, inv, cost, cap, p, r, x, aug)) (ind: int[]) (supply: HashSet<int>) =
+    let augment sink (Dual(adj, inv, cost, cap, g, p, r, x, ind, supply, aug)) =
         let rec trace j d =
             match ind[j] with
             | i when i = j -> i, d
@@ -56,7 +58,6 @@ module Dual =
         let p = Array.zeroCreate<int> n.Length
         let r = Dictionary<int * int, int> cost
         let x = Dictionary<int * int, int> cost.Count
-        let aug = Stack<(int * int) * int * int * (int -> int -> int)> n.Length
 
         cost
         |> Seq.iter (function
@@ -66,14 +67,15 @@ module Dual =
                 g[j] <- g[j] + x[k]
             | KeyValue(k, _) -> x[k] <- 0)
 
-        Dual(g, adj, inv, cost, cap, p, r, x, aug)
+        let ind = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
+        let supply = ind |> Array.filter (fun e -> e <> 0) |> HashSet
+        let aug = Stack<(int * int) * int * int * (int -> int -> int)> n.Length
+        Dual(adj, inv, cost, cap, g, p, r, x, ind, supply, aug)
 
-    let pd (Dual(g, adj, inv, cost, cap, p, r, x, aug) as sub) =
+    let pd (Dual(adj, inv, cost, cap, g, p, r, x, ind, supply, aug) as sub) =
         let mutable sink = 0
         let todo = Queue<int> g.Length
         let expand = Queue<int * int * bool> g.Length
-        let ind = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
-        let supply = ind |> Array.filter (fun e -> e <> 0) |> HashSet
         supply |> Seq.iter (fun e -> todo.Enqueue e)
 
         let check i j =
@@ -168,7 +170,7 @@ module Dual =
 
                     iter ()
             | _, s ->
-                augment s sub ind supply
+                augment s sub
                 todo.Clear()
                 g |> Array.iteri (fun i e -> if e > 0 then ind[i] <- i else ind[i] <- 0)
                 supply |> Seq.iter (fun e -> todo.Enqueue e)
@@ -177,26 +179,20 @@ module Dual =
 
         iter ()
 
-    let ssp (Dual(g, adj, inv, cost, cap, p, r, x, aug) as sub) : Solution =
-        let dist = Array.create g.Length Int32.MaxValue
+    let ssp (Dual(adj, inv, cost, cap, g, p, r, x, ind, supply, aug) as sub) =
+        let distance = Array.create g.Length Int32.MaxValue
         let todo = Dictionary<int, Queue<int>>()
-        let ind = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
-        let supply = ind |> Array.filter (fun e -> e <> 0) |> HashSet
 
-        let check i j o d =
+        let check i j o (dist: int[]) d =
             match d with
             | d when d < dist[j] ->
                 dist[j] <- d
                 ind[j] <- if o then i else -i
                 if todo.ContainsKey d then () else todo[d] <- Queue<int>()
                 todo[d].Enqueue j
-            | d when d = dist[j] && ind[j] = 0 ->
-                ind[j] <- if o then i else -i
-                if todo.ContainsKey d then () else todo[d] <- Queue<int>()
-                todo[d].Enqueue j
             | _ -> ()
 
-        let scan k =
+        let scan k (dist: int[]) =
             match todo[k].Dequeue() with
             | i when dist[i] <> k -> 0
             | i when g[i] < 0 -> i
@@ -207,10 +203,10 @@ module Dual =
                     | x when x = cap[(i, j)] -> ()
                     | _ ->
                         match r[(i, j)] with
-                        | 0 -> check i j true dist[i]
+                        | 0 -> check i j true dist dist[i]
                         | _ ->
                             r[(i, j)] <- p[j] + cost[(i, j)] - p[i]
-                            check i j true <| dist[i] + r[(i, j)])
+                            check i j true dist <| dist[i] + r[(i, j)])
 
                 inv[i]
                 |> Array.iter (fun j ->
@@ -218,14 +214,14 @@ module Dual =
                     | 0 -> ()
                     | _ ->
                         match r[(j, i)] with
-                        | 0 -> check i j false dist[i]
+                        | 0 -> check i j false dist dist[i]
                         | _ ->
                             r[(j, i)] <- p[j] - cost[(j, i)] - p[i]
-                            check i j false <| dist[i] + r[(j, i)])
+                            check i j false dist <| dist[i] + r[(j, i)])
 
                 0
 
-        let rec iter k sink =
+        let rec iter k (dist: int[]) sink =
             match supply.Count, sink with
             | 0, _ -> Optimal x
             | _, 0 ->
@@ -236,20 +232,26 @@ module Dual =
                     | _ ->
                         todo.Remove k |> ignore
                         let k = Seq.min todo.Keys
-                        iter k 0
-                | _ -> iter k <| scan k
+                        iter k dist 0
+                | _ -> iter k dist <| scan k dist
             | _, s ->
-                augment s sub ind supply
+                augment s sub
                 dist |> Array.iteri (fun i d -> if k > d then p[i] <- p[i] + k - d else ())
                 todo.Clear()
                 todo[0] <- Queue supply
                 g |> Array.iteri (fun i e -> if e > 0 then ind[i] <- i else ind[i] <- 0)
-                iter 0 0
+                iter 0 (Array.copy distance) 0
 
-        supply |> Seq.iter (fun e -> dist[e] <- 0)
+        supply |> Seq.iter (fun e -> distance[e] <- 0)
         todo[0] <- Queue supply
-        iter 0 0
+        iter 0 (Array.copy distance) 0
 
-    let rex (sub: T) : Solution =
+    let rex (Dual(adj, inv, cost, cap, g, p, r, x, ind, supply, aug) as sub) : Solution =
+        let mutable sink = 0
+        let todo = Queue<int> g.Length
+        let expand = Queue<int * int * bool> g.Length
+        supply |> Seq.iter (fun e -> todo.Enqueue e)
+
+
 
         failwith ""

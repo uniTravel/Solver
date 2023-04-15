@@ -8,7 +8,7 @@ open Solver.Network
 let test1 =
     testList
         "对偶Primal-Dual方法"
-        [ testCase "有上界，无负成本"
+        [ testCase "无负成本"
           <| fun _ ->
               let n = [| 0; 50; 40; 0; -30; -60 |]
               let adj = [| [||]; [| 2; 3; 4 |]; [| 3 |]; [| 5 |]; [| 5 |]; [| 4 |] |]
@@ -44,7 +44,22 @@ let test1 =
                   Expect.hasLength x 7 "解集大小错误"
                   Expect.containsAll x sx "解集不一致"
               | _ -> failtest "应该返回最优解"
-          testCase "有上界，有负成本"
+          testCase "例子"
+          <| fun _ ->
+              let n = [| 0; 1; 2; -1; -2 |]
+              let adj = [| [||]; [| 2; 3 |]; [| 3; 4 |]; [| 2; 4 |]; [||] |]
+              let inv = [| [||]; [||]; [| 1; 3 |]; [| 1; 2 |]; [| 2; 3 |] |]
+              let cost = dict [ (1, 2), 5; (1, 3), 1; (2, 3), 4; (3, 2), 3; (2, 4), 2; (3, 4), 2 ]
+              let cap = dict [ (1, 2), 2; (1, 3), 2; (2, 3), 2; (3, 2), 1; (2, 4), 1; (3, 4), 3 ]
+              let sub = Subject.init n adj inv cost cap
+              let sx = dict [ (1, 2), 0; (1, 3), 1; (2, 3), 1; (3, 2), 0; (2, 4), 1; (3, 4), 1 ]
+
+              match Dual.create sub |> Dual.pd with
+              | Optimal x ->
+                  Expect.hasLength x 6 "解集大小错误"
+                  Expect.containsAll x sx "解集不一致"
+              | _ -> failtest "应该返回最优解"
+          testCase "有负成本"
           <| fun _ ->
               let n = [| 0; 1; 2; -2; 0; -1 |]
               let adj = [| [||]; [| 2; 3 |]; [| 3; 4; 5 |]; [| 2 |]; [| 3; 5 |]; [| 4 |] |]
@@ -99,7 +114,7 @@ let test1 =
 let test2 =
     testList
         "对偶Sequencial Shortest Path方法"
-        [ testCase "有上界，无负成本"
+        [ testCase "无负成本"
           <| fun _ ->
               let n = [| 0; 50; 40; 0; -30; -60 |]
               let adj = [| [||]; [| 2; 3; 4 |]; [| 3 |]; [| 5 |]; [| 5 |]; [| 4 |] |]
@@ -135,7 +150,22 @@ let test2 =
                   Expect.hasLength x 7 "解集大小错误"
                   Expect.containsAll x sx "解集不一致"
               | _ -> failtest "应该返回最优解"
-          testCase "有上界，有负成本"
+          testCase "例子"
+          <| fun _ ->
+              let n = [| 0; 1; 2; -1; -2 |]
+              let adj = [| [||]; [| 2; 3 |]; [| 3; 4 |]; [| 2; 4 |]; [||] |]
+              let inv = [| [||]; [||]; [| 1; 3 |]; [| 1; 2 |]; [| 2; 3 |] |]
+              let cost = dict [ (1, 2), 5; (1, 3), 1; (2, 3), 4; (3, 2), 3; (2, 4), 2; (3, 4), 2 ]
+              let cap = dict [ (1, 2), 2; (1, 3), 2; (2, 3), 2; (3, 2), 1; (2, 4), 1; (3, 4), 3 ]
+              let sub = Subject.init n adj inv cost cap
+              let sx = dict [ (1, 2), 0; (1, 3), 1; (2, 3), 1; (3, 2), 0; (2, 4), 1; (3, 4), 1 ]
+
+              match Dual.create sub |> Dual.ssp with
+              | Optimal x ->
+                  Expect.hasLength x 6 "解集大小错误"
+                  Expect.containsAll x sx "解集不一致"
+              | _ -> failtest "应该返回最优解"
+          testCase "有负成本"
           <| fun _ ->
               let n = [| 0; 1; 2; -2; 0; -1 |]
               let adj = [| [||]; [| 2; 3 |]; [| 3; 4; 5 |]; [| 2 |]; [| 3; 5 |]; [| 4 |] |]
@@ -190,7 +220,7 @@ let test2 =
 let test3 =
     ptestList
         "对偶Relaxation方法"
-        [ testCase "有上界，无负成本"
+        [ testCase "无负成本"
           <| fun _ ->
               let n = [| 0; 50; 40; 0; -30; -60 |]
               let adj = [| [||]; [| 2; 3; 4 |]; [| 3 |]; [| 5 |]; [| 5 |]; [| 4 |] |]
@@ -226,7 +256,22 @@ let test3 =
                   Expect.hasLength x 7 "解集大小错误"
                   Expect.containsAll x sx "解集不一致"
               | _ -> failtest "应该返回最优解"
-          testCase "有上界，有负成本"
+          testCase "例子"
+          <| fun _ ->
+              let n = [| 0; 3; 2; -1; -4 |]
+              let adj = [| [||]; [| 2; 3 |]; [| 3; 4 |]; [| 2; 4 |]; [||] |]
+              let inv = [| [||]; [||]; [| 1; 3 |]; [| 1; 2 |]; [| 2; 3 |] |]
+              let cost = dict [ (1, 2), 5; (1, 3), 1; (2, 3), 4; (3, 2), 3; (2, 4), 2; (3, 4), 0 ]
+              let cap = dict [ (1, 2), 2; (1, 3), 2; (2, 3), 3; (3, 2), 2; (2, 4), 1; (3, 4), 5 ]
+              let sub = Subject.init n adj inv cost cap
+              let sx = dict [ (1, 2), 1; (1, 3), 2; (2, 3), 2; (3, 2), 0; (2, 4), 1; (3, 4), 3 ]
+
+              match Dual.create sub |> Dual.rex with
+              | Optimal x ->
+                  Expect.hasLength x 6 "解集大小错误"
+                  Expect.containsAll x sx "解集不一致"
+              | _ -> failtest "应该返回最优解"
+          testCase "有负成本"
           <| fun _ ->
               let n = [| 0; 1; 2; -2; 0; -1 |]
               let adj = [| [||]; [| 2; 3 |]; [| 3; 4; 5 |]; [| 2 |]; [| 3; 5 |]; [| 4 |] |]
