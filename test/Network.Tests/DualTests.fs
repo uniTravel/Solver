@@ -218,7 +218,7 @@ let test2 =
 
 [<Tests>]
 let test3 =
-    ptestList
+    testList
         "对偶Relaxation方法"
         [ testCase "无负成本"
           <| fun _ ->
