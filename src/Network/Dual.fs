@@ -14,11 +14,10 @@ module Dual =
             cap: IDictionary<int * int, int> *
             g: int[] *
             p: int[] *
-            r: Dictionary<int * int, int> *
             x: Dictionary<int * int, int> *
             aug: Stack<(int * int) * int * int * (int -> int -> int)>
 
-    let augment sink (Dual(adj, inv, cost, cap, g, p, r, x, aug)) (ind: int[]) =
+    let augment sink (Dual(adj, inv, cost, cap, g, p, x, aug)) (ind: int[]) =
         let rec trace j d =
             match ind[j] with
             | i when i = j -> i, d
@@ -43,7 +42,7 @@ module Dual =
         g[sink] <- g[sink] + d
         i
 
-    let price (Dual(adj, inv, cost, cap, g, p, r, x, aug)) ind (expand: Queue<int * int * bool>) =
+    let price (Dual(adj, inv, cost, cap, g, p, x, aug)) ind (expand: Queue<int * int * bool>) =
         let min d i j =
             function
             | true ->
@@ -97,7 +96,6 @@ module Dual =
 
         let g = Array.copy n
         let p = Array.zeroCreate<int> n.Length
-        let r = Dictionary<int * int, int> cost
         let x = Dictionary<int * int, int> cost.Count
 
         cost
@@ -109,9 +107,9 @@ module Dual =
             | KeyValue(k, _) -> x[k] <- 0)
 
         let aug = Stack<(int * int) * int * int * (int -> int -> int)> n.Length
-        Dual(adj, inv, cost, cap, g, p, r, x, aug)
+        Dual(adj, inv, cost, cap, g, p, x, aug)
 
-    let pd (Dual(adj, inv, cost, cap, g, p, r, x, aug) as sub) =
+    let pd (Dual(adj, inv, cost, cap, g, p, x, aug) as sub) =
         let mutable sink = 0
         let indicator = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
         let supply = indicator |> Array.filter (fun e -> e <> 0) |> HashSet
@@ -139,12 +137,8 @@ module Dual =
 
                         while expand.Count <> 0 do
                             match expand.Dequeue() with
-                            | i, j, true ->
-                                r[(i, j)] <- 0
-                                check i j ind
-                            | i, j, false ->
-                                r[(j, i)] <- 0
-                                check -i j ind
+                            | i, j, true -> check i j ind
+                            | i, j, false -> check -i j ind
 
                         iter ind
                 | _ ->
@@ -152,14 +146,14 @@ module Dual =
 
                     adj[i]
                     |> Array.iter (fun j ->
-                        match r[(i, j)] with
-                        | 0 -> if x[(i, j)] = cap[(i, j)] then () else check i j ind
+                        match p[j] + cost[(i, j)] with
+                        | v when v = p[i] && x[(i, j)] <> cap[(i, j)] -> check i j ind
                         | _ -> ())
 
                     inv[i]
                     |> Array.iter (fun j ->
-                        match r[(j, i)] with
-                        | 0 -> if x[(j, i)] = 0 then () else check -i j ind
+                        match p[j] - cost[(j, i)] with
+                        | v when v = p[i] && x[(j, i)] <> 0 -> check -i j ind
                         | _ -> ())
 
                     iter ind
@@ -177,7 +171,7 @@ module Dual =
 
         Array.copy indicator |> iter
 
-    let ssp (Dual(adj, inv, cost, cap, g, p, r, x, aug) as sub) =
+    let ssp (Dual(adj, inv, cost, cap, g, p, x, aug) as sub) =
         let indicator = Array.init g.Length <| fun i -> if g[i] > 0 then i else 0
         let supply = indicator |> Array.filter (fun e -> e <> 0) |> HashSet
         let distance = Array.create g.Length Int32.MaxValue
@@ -203,22 +197,18 @@ module Dual =
                     match x[(i, j)] with
                     | x when x = cap[(i, j)] -> ()
                     | _ ->
-                        match r[(i, j)] with
+                        match p[j] + cost[(i, j)] - p[i] with
                         | 0 -> check i j true ind dist dist[i]
-                        | _ ->
-                            r[(i, j)] <- p[j] + cost[(i, j)] - p[i]
-                            check i j true ind dist <| dist[i] + r[(i, j)])
+                        | r -> check i j true ind dist <| dist[i] + r)
 
                 inv[i]
                 |> Array.iter (fun j ->
                     match x[(j, i)] with
                     | 0 -> ()
                     | _ ->
-                        match r[(j, i)] with
+                        match p[j] - cost[(j, i)] - p[i] with
                         | 0 -> check i j false ind dist dist[i]
-                        | _ ->
-                            r[(j, i)] <- p[j] - cost[(j, i)] - p[i]
-                            check i j false ind dist <| dist[i] + r[(j, i)])
+                        | r -> check i j false ind dist <| dist[i] + r)
 
                 0
 
@@ -250,7 +240,7 @@ module Dual =
         todo[0] <- Queue supply
         iter 0 (Array.copy indicator) (Array.copy distance) 0
 
-    let rex (Dual(adj, inv, cost, cap, g, p, r, x, aug) as sub) : Solution =
+    let rex (Dual(adj, inv, cost, cap, g, p, x, aug) as sub) =
         let mutable sink = 0
         let mutable q = 0
         let ind = Array.zeroCreate g.Length
@@ -261,33 +251,34 @@ module Dual =
 
         let init i =
             q <-
-                adj[i]
-                |> Array.sumBy (fun j -> if r[(i, j)] = 0 then cap[(i, j)] - x[(i, j)] else 0)
-                |> (+) (inv[i] |> Array.sumBy (fun j -> if r[(j, i)] = 0 then x[(j, i)] else 0))
-                |> (-) g[i]
+                g[i]
+                - (adj[i]
+                   |> Array.sumBy (fun j ->
+                       match p[j] + cost[(i, j)] with
+                       | v when v = p[i] -> cap[(i, j)] - x[(i, j)]
+                       | _ -> 0))
+                - (inv[i]
+                   |> Array.sumBy (fun j ->
+                       match p[j] - cost[(j, i)] with
+                       | v when v = p[i] -> x[(j, i)]
+                       | _ -> 0))
 
         let update () =
             q <-
-                expand
-                |> Seq.sumBy (fun (i, j, o) -> if o then cap[(i, j)] - x[(i, j)] else x[(j, i)])
-                |> (-) q
+                q
+                - (expand
+                   |> Seq.sumBy (fun (i, j, o) -> if o then cap[(i, j)] - x[(i, j)] else x[(j, i)]))
 
         let append i =
             q <-
                 q
                 + g[i]
                 + (adj[i]
-                   |> Array.sumBy (fun j ->
-                       match r[(i, j)], ind[j] with
-                       | 0, 0 -> x[(i, j)] - cap[(i, j)]
-                       | 0, _ -> x[(i, j)]
-                       | _ -> 0))
-                + (inv[i]
-                   |> Array.sumBy (fun j ->
-                       match r[(j, i)], ind[j] with
-                       | 0, 0 -> -x[(j, i)]
-                       | 0, _ -> cap[(j, i)] - x[(j, i)]
-                       | _ -> 0))
+                   |> Array.filter (fun j -> p[j] + cost[(i, j)] = p[i])
+                   |> Array.sumBy (fun j -> if ind[j] = 0 then x[(i, j)] - cap[(i, j)] else x[(i, j)]))
+                - (inv[i]
+                   |> Array.filter (fun j -> p[j] - cost[(j, i)] = p[i])
+                   |> Array.sumBy (fun j -> if ind[j] = 0 then x[(j, i)] else x[(j, i)] - cap[(j, i)]))
 
         let check i j o =
             match sink, ind[j] with
@@ -317,20 +308,12 @@ module Dual =
                     update ()
 
                     match q with
-                    | q' when q' > 0 ->
-                        while expand.Count <> 0 do
-                            match expand.Dequeue() with
-                            | i, j, true -> r[(i, j)] <- 0
-                            | i, j, false -> r[(j, i)] <- 0
+                    | q' when q' > 0 -> expand.Clear()
                     | _ ->
                         while expand.Count <> 0 do
                             match expand.Dequeue() with
-                            | i, j, true ->
-                                r[(i, j)] <- 0
-                                check i j true
-                            | i, j, false ->
-                                r[(j, i)] <- 0
-                                check i j false
+                            | i, j, true -> check i j true
+                            | i, j, false -> check i j false
 
                     iter t
 
@@ -346,42 +329,44 @@ module Dual =
                         | _ ->
                             adj[i]
                             |> Array.iter (fun j ->
-                                match r[(i, j)], ind[j] with
-                                | 0, 0 when x[(i, j)] <> cap[(i, j)] ->
+                                match ind[j], p[j] + cost[(i, j)] with
+                                | 0, v when v = p[i] && x[(i, j)] <> cap[(i, j)] ->
                                     let v = cap[(i, j)] - x[(i, j)]
+                                    let gj = g[j]
                                     x[(i, j)] <- cap[(i, j)]
                                     g[i] <- g[i] - v
                                     g[j] <- g[j] + v
-                                    if g[j] > 0 then supply.Enqueue j else ()
+                                    if gj <= 0 && g[j] > 0 then supply.Enqueue j else ()
                                     q <- q - v
                                 | _ -> ())
 
                             inv[i]
                             |> Array.iter (fun j ->
-                                match r[(j, i)], ind[j] with
-                                | 0, 0 when x[(j, i)] <> 0 ->
+                                match ind[j], p[j] - cost[(j, i)] with
+                                | 0, v when v = p[i] && x[(j, i)] <> 0 ->
                                     let v = x[(j, i)]
+                                    let gj = g[j]
                                     x[(j, i)] <- 0
                                     g[i] <- g[i] - v
                                     g[j] <- g[j] + v
-                                    if g[j] > 0 then supply.Enqueue j else ()
+                                    if gj <= 0 && g[j] > 0 then supply.Enqueue j else ()
                                     q <- q - v
                                 | _ -> ()))
 
-                    apply ()
+                    if g[t] = 0 then iter t else apply ()
                 | _ ->
                     let i = todo.Dequeue()
 
                     adj[i]
                     |> Array.iter (fun j ->
-                        match r[(i, j)] with
-                        | 0 -> if x[(i, j)] = cap[(i, j)] then () else check i j true
+                        match p[j] + cost[(i, j)] with
+                        | v when v = p[i] && x[(i, j)] <> cap[(i, j)] -> check i j true
                         | _ -> ())
 
                     inv[i]
                     |> Array.iter (fun j ->
-                        match r[(j, i)] with
-                        | 0 -> if x[(j, i)] = 0 then () else check i j false
+                        match p[j] - cost[(j, i)] with
+                        | v when v = p[i] && x[(j, i)] <> 0 -> check i j false
                         | _ -> ())
 
                     iter t
