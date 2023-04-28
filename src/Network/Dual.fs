@@ -42,47 +42,40 @@ module Dual =
         g[sink] <- g[sink] + d
         i
 
-    let price (Dual(adj, inv, cost, cap, g, p, x, aug)) ind (expand: Queue<int * int * bool>) =
-        let min d i j =
-            function
-            | true ->
-                match p[j] + cost[(i, j)] - p[i] with
-                | r when r > d -> d
-                | r when r = d ->
-                    expand.Enqueue(i, j, true)
-                    d
-                | r ->
-                    expand.Clear()
-                    expand.Enqueue(i, j, true)
-                    r
-            | false ->
-                match p[j] - cost[(j, i)] - p[i] with
-                | r when r > d -> d
-                | r when r = d ->
-                    expand.Enqueue(i, j, false)
-                    d
-                | r ->
-                    expand.Clear()
-                    expand.Enqueue(i, j, false)
-                    r
-
+    let price (Dual(adj, inv, cost, cap, g, p, x, aug)) (expand: Queue<int * int * bool>) ind =
         (Int32.MaxValue, Array.indexed ind)
         ||> Array.fold (fun d (i, e) ->
             match e with
             | 0 -> d
             | _ ->
-                Array.fold
-                    (fun d j ->
-                        match ind[j] with
-                        | 0 -> if x[(i, j)] = cap[(i, j)] then d else min d i j true
-                        | _ -> d)
-                    d
-                    adj[i]
+                (d, adj[i])
+                ||> Array.fold (fun d j ->
+                    match ind[j], x[(i, j)] with
+                    | 0, x when x <> cap[(i, j)] ->
+                        match p[j] + cost[(i, j)] - p[i] with
+                        | r when r > d -> d
+                        | r when r = d ->
+                            expand.Enqueue(i, j, true)
+                            d
+                        | r ->
+                            expand.Clear()
+                            expand.Enqueue(i, j, true)
+                            r
+                    | _ -> d)
                 |> Array.foldBack
-                    (fun j dm ->
-                        match ind[j] with
-                        | 0 -> if x[(j, i)] = 0 then dm else min dm i j false
-                        | _ -> dm)
+                    (fun j d ->
+                        match ind[j], x[(j, i)] with
+                        | 0, x when x <> 0 ->
+                            match p[j] - cost[(j, i)] - p[i] with
+                            | r when r > d -> d
+                            | r when r = d ->
+                                expand.Enqueue(i, j, false)
+                                d
+                            | r ->
+                                expand.Clear()
+                                expand.Enqueue(i, j, false)
+                                r
+                        | _ -> d)
                     inv[i])
 
     let create sub =
@@ -130,7 +123,7 @@ module Dual =
             | _, 0 ->
                 match todo.Count with
                 | 0 ->
-                    match price sub ind expand with
+                    match price sub expand ind with
                     | Int32.MaxValue -> Infeasible
                     | d ->
                         ind |> Array.iteri (fun i e -> if e <> 0 then p[i] <- p[i] + d else ())
@@ -229,6 +222,7 @@ module Dual =
                 match augment s sub ind with
                 | i when g[i] = 0 ->
                     supply.Remove i |> ignore
+                    distance[i] <- Int32.MaxValue
                     indicator[i] <- 0
                 | _ -> ()
 
@@ -301,7 +295,7 @@ module Dual =
 
         let rec iter t =
             let apply () =
-                match price sub ind expand with
+                match price sub expand ind with
                 | Int32.MaxValue -> Infeasible
                 | d ->
                     ind |> Array.iteri (fun i e -> if e <> 0 then p[i] <- p[i] + d else ())
@@ -383,3 +377,107 @@ module Dual =
                     reset t |> iter
 
         supply.Dequeue() |> reset |> iter
+
+    let snr (Dual(adj, inv, cost, cap, g, p, x, aug) as sub) =
+        let supply = Queue<int> g.Length
+        let expand = Queue<int * int * bool> g.Length
+        g |> Array.iteri (fun i e -> if e > 0 then supply.Enqueue i else ())
+
+        let price i =
+            (Int32.MaxValue, adj[i])
+            ||> Array.fold (fun pi j ->
+                match x[(i, j)] with
+                | x when x <> cap[(i, j)] ->
+                    match p[j] + cost[(i, j)] with
+                    | v when v > pi -> pi
+                    | v when v = pi ->
+                        expand.Enqueue(i, j, true)
+                        pi
+                    | v ->
+                        expand.Clear()
+                        expand.Enqueue(i, j, true)
+                        v
+                | _ -> pi)
+            |> Array.foldBack
+                (fun j pi ->
+                    match x[(j, i)] with
+                    | 0 -> pi
+                    | _ ->
+                        match p[j] - cost[(j, i)] with
+                        | v when v > pi -> pi
+                        | v when v = pi ->
+                            expand.Enqueue(i, j, false)
+                            pi
+                        | v ->
+                            expand.Clear()
+                            expand.Enqueue(i, j, false)
+                            v)
+                inv[i]
+
+        let rec iter i =
+            match g[i] with
+            | 0 -> ()
+            | _ ->
+                match
+                    expand
+                    |> Seq.sumBy (fun (i, j, o) -> if o then cap[(i, j)] - x[(i, j)] else x[(j, i)])
+                with
+                | v when v > g[i] ->
+                    while expand.Count <> 0 do
+                        match expand.Dequeue() with
+                        | i, j, true ->
+                            if g[j] < 0 then
+                                let l = cap[(i, j)] - x[(i, j)] |> min g[i] |> min -g[j]
+                                x[(i, j)] <- x[(i, j)] + l
+                                g[i] <- g[i] - l
+                                g[j] <- g[j] + l
+                                if g[i] = 0 then expand.Clear() else ()
+                        | i, j, false ->
+                            if g[j] < 0 then
+                                let l = x[(j, i)] |> min g[i] |> min -g[j]
+                                x[(j, i)] <- x[(j, i)] - l
+                                g[i] <- g[i] - l
+                                g[j] <- g[j] + l
+                                if g[i] = 0 then expand.Clear() else ()
+                | _ ->
+                    while expand.Count <> 0 do
+                        match expand.Dequeue() with
+                        | i, j, true ->
+                            let delta = cap[(i, j)] - x[(i, j)]
+                            let gj = g[j]
+                            x[(i, j)] <- cap[(i, j)]
+                            g[i] <- g[i] - delta
+                            g[j] <- g[j] + delta
+                            if gj <= 0 && g[j] > 0 then supply.Enqueue j else ()
+                        | i, j, false ->
+                            let delta = x[(j, i)]
+                            let gj = g[j]
+                            x[(j, i)] <- 0
+                            g[i] <- g[i] - delta
+                            g[j] <- g[j] + delta
+                            if gj <= 0 && g[j] > 0 then supply.Enqueue j else ()
+
+                    match price i with
+                    | Int32.MaxValue -> ()
+                    | pi ->
+                        p[i] <- pi
+                        iter i
+
+        while supply.Count <> 0 do
+            let i = supply.Dequeue()
+
+            adj[i]
+            |> Array.iter (fun j ->
+                match p[j] + cost[(i, j)] with
+                | v when v = p[i] && x[(i, j)] <> cap[(i, j)] -> expand.Enqueue(i, j, true)
+                | _ -> ())
+
+            inv[i]
+            |> Array.iter (fun j ->
+                match p[j] - cost[(j, i)] with
+                | v when v = p[i] && x[(j, i)] <> 0 -> expand.Enqueue(i, j, false)
+                | _ -> ())
+
+            iter i
+
+        sub

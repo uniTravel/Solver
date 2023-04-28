@@ -39,3 +39,13 @@ module Dual =
     /// <param name="sub">网络规划对偶算法模型。</param>
     /// <returns>网络规划问题的解</returns>
     val rex: sub: T -> Solution
+
+    /// <summary>优化网络规划问题
+    /// </summary>
+    /// <remarks>
+    /// <para>1、Single-Node Relaxation迭代。</para>
+    /// <para>2、优化后的问题不建议用Relaxation方法求解。</para>
+    /// </remarks>
+    /// <param name="sub">网络规划对偶算法模型。</param>
+    /// <returns>优化后的网络规划对偶算法模型。</returns>
+    val snr: sub: T -> T
